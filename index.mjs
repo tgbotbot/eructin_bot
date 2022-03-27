@@ -2,13 +2,14 @@ import 'dotenv/config';
 import {Telegraf} from 'telegraf';
 import pokemon from 'pokemon';
 
-const bot = new Telegraf(process.env.TOKEN)
+const TOKEN = process.env.TOKEN;
+const bot = new Telegraf(TOKEN);
 bot.command('random', (ctx) => {
     ctx.reply(pokemon.getName(Math.floor(152 * Math.random())))
 })
 
 const removeMessage = (ctx) => {
-  ctx.deleteMessage(ctx.update.message.message_id);
+  ctx.deleteMessage(ctx.update.message.message_id).catch(noop);
 };
 
 const noop = () => {};
@@ -107,8 +108,8 @@ bot.on('callback_query', (ctx) => {
   }, {
     chat_id: callback_query.from.id, 
     message_id: callback_query.message.message_id
-  });
-  ctx.answerCbQuery();
+  }).catch(noop);
+  ctx.answerCbQuery().catch(noop);
 
 })
 
