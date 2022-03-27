@@ -11,6 +11,7 @@ const removeMessage = (ctx) => {
   ctx.deleteMessage(ctx.update.message.message_id);
 };
 
+
 const OK_TYPE = 'OK';
 const BAD_TYPE = 'BAD';
 const TOP_TYPE = 'TOP';
