@@ -11,6 +11,7 @@ const removeMessage = (ctx) => {
   ctx.deleteMessage(ctx.update.message.message_id);
 };
 
+const noop = () => {};
 
 const OK_TYPE = 'OK';
 const BAD_TYPE = 'BAD';
@@ -94,6 +95,7 @@ bot.on('voice', (ctx) => {
       inline_keyboard: drawButtons(message.message_id)
     }
   })
+  .catch(noop)
 });
 bot.on('callback_query', (ctx) => {
   const callback_query = ctx.update.callback_query;
