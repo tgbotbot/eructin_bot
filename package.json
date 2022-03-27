@@ -1,11 +1,11 @@
 {
   "name": "tgbot",
   "version": "1.0.0",
-  "typpe": "module",
+  "type": "module",
   "description": "",
   "main": "index.mjs",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node index.mjs"
   },
   "author": "",
   "license": "ISC",
@@ -13,5 +13,9 @@
     "dotenv": "^16.0.0",
     "pokemon": "^2.3.2",
     "telegraf": "^4.7.0"
+  },
+  "engines": {
+    "node": "16.10.0",
+    "npm": "7.24.0"
   }
 }
