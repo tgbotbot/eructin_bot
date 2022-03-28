@@ -114,3 +114,10 @@ bot.on('callback_query', (ctx) => {
 })
 
 bot.launch();
+const restart = (signal) => {
+  bot.stop('SIGINT');
+  bot.launch();
+}
+
+process.on('SIGINT', () => restart('SIGINT'));
+process.on('SIGTERM', () => restart('SIGTERM'));
