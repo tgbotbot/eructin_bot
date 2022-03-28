@@ -120,6 +120,6 @@ const restart = (signal) => {
   bot.launch();
 }
 
-process.on('SIGINT', () => {restart('SIGINT'));
+process.on('SIGINT', () => restart('SIGINT'));
 process.on('SIGTERM', () => restart('SIGTERM'));
 process.on('SIGKILL', () => restart('SIGKILL'));
