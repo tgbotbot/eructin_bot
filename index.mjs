@@ -113,12 +113,26 @@ bot.on('callback_query', (ctx) => {
 
 })
 
-bot.launch();
 const restart = (signal) => {
   console.log('stop', signal);
   bot.stop(signal);
-  bot.launch();
+  //bot.launch();
 }
 
 process.on('SIGINT', () => restart('SIGINT'));
 process.on('SIGTERM', () => restart('SIGTERM'));
+
+const launchBot = () => {
+  if (process.env.NODE_ENV === 'production') {
+    const URL = 'https://radiant-fortress-05622.herokuapp.com';
+    const PORT = process.env.PORT || 3000;
+    bot.telegram.setWebhook(`${URL}/bot${TOKEN}`);
+    bot.startWebhook(`/bot${TOKEN}`, null, PORT)
+  } else {
+    bot.launch()
+  }
+}
+
+launchBot()
+
+
