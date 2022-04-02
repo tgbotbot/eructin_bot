@@ -1,12 +1,26 @@
 import 'dotenv/config';
 import {Telegraf} from 'telegraf';
-import pokemon from 'pokemon';
+import { DataRepository } from './repository.mjs';
+import { Model } from './model.mjs';
 
-const TOKEN = process.env.TOKEN;
-const bot = new Telegraf(TOKEN);
-bot.command('random', (ctx) => {
-    ctx.reply(pokemon.getName(Math.floor(152 * Math.random())))
-})
+const MILISECONDS_PER_HOUR = 60 * 60 * 1000;
+const {
+  GIST_ID,
+  GITHUB_TOKEN,
+  TELEGRAM_TOKEN,
+} = process.env;
+const URL = 'https://radiant-fortress-05622.herokuapp.com';
+const bot = new Telegraf(TELEGRAM_TOKEN);
+
+const repository = DataRepository({
+  gist_id: GIST_ID,
+  github_token: GITHUB_TOKEN,
+  file_name: 'eructin.json'
+});
+
+const model = Model(repository);
+
+model.sync({interval: MILISECONDS_PER_HOUR});
 
 const removeMessage = (ctx) => {
   ctx.deleteMessage(ctx.update.message.message_id).catch(noop);
@@ -14,68 +28,42 @@ const removeMessage = (ctx) => {
 
 const noop = () => {};
 
-const OK_TYPE = 'OK';
-const BAD_TYPE = 'BAD';
-const TOP_TYPE = 'TOP';
-const FIRE_TYPE = 'FIRE';
-const HORRIBLE_TYPE = 'HORRIBLE';
-const WONDERFUL_TYPE = 'WONDERFUL';
+const types = [{
+  text: "👍",
+}, {
+  text: "👎",
+}, {
+  text: "🔝",
+}, {
+  text: "🔥",
+}, {
+  text: "🤮",
+}, {
+  text: "🗣️",
+}]
 
-const dataBase = {
-  [OK_TYPE]: {
-    text: "👍",
-    votes: {}
-  },
-  [BAD_TYPE]: {
-    text: "👎",
-    votes: {}
-  },
-  [TOP_TYPE]: {
-    text: "🔝",
-    votes: {}
-  },
-  [FIRE_TYPE]: {
-    text: "🔥",
-    votes: {}
-  },
-  [HORRIBLE_TYPE]: {
-    text: "🤮",
-    votes: {}
-  },
-  [WONDERFUL_TYPE]: {
-    text: "🗣️",
-    votes: {}
-  }
-};
-
-const drawButton = (voiceMessageId, type) => {
-  const {text, votes} = dataBase[type];
+const drawButton = (votes, typeId) => {
+  const {text} = types[typeId];
   return {
-    text: `${text} ${votes[voiceMessageId] || ''}`,
-    callback_data: type,
+    text: `${text} ${votes}`,
+    callback_data: typeId,
   }
 };
 
-const drawButtons = (voiceMessageId) => {
+const drawButtons = (messageVotes) => {
   let currentButtonPartition;
-  return Object.keys(dataBase).reduce(
-    (buttons, type, index) => {
-      if (index % 3 === 0) {
+  return messageVotes.reduce(
+    (buttons, votes, typeId) => {
+      if (typeId % 3 === 0) {
         currentButtonPartition = []
         buttons.push(currentButtonPartition);
       }
-      currentButtonPartition.push(drawButton(voiceMessageId, type))
+      currentButtonPartition.push(drawButton(votes, typeId))
       return buttons;
     },
     []
   )
 };
-
-const addVote = (voiceMessageId, type) => {
-  const votes = dataBase[type].votes;
-  votes[voiceMessageId] = (votes[voiceMessageId] || 0) + 1;
-}
-
 
 bot.on('text', removeMessage);
 bot.on('document', removeMessage);
@@ -84,47 +72,53 @@ bot.on('dice', removeMessage);
 bot.on('game', removeMessage);
 bot.on('photo', removeMessage);
 bot.on('poll_answer', removeMessage);
-//bot.on('poll', removeMessage);
+bot.on('poll', removeMessage);
 bot.on('sticker', removeMessage);
 bot.on('venue', removeMessage);
 bot.on('video_note', removeMessage); 
-bot.on('voice', (ctx) => {
+bot.on('voice', async (ctx) => {
   const message = ctx.update.message;
+  const messageVotes = await model.getMessageVotes(message.message_id)
   ctx.reply(`Vota el eructo de @${message.from.username}`, {
     reply_to_message_id: message.message_id,
     reply_markup: {
-      inline_keyboard: drawButtons(message.message_id)
+      inline_keyboard: drawButtons(messageVotes)
     }
   })
-  .catch(noop)
+  .catch(noop);
 });
-bot.on('callback_query', (ctx) => {
+bot.on('callback_query', async (ctx) => {
   const callback_query = ctx.update.callback_query;
-  const voiceId = callback_query.message.reply_to_message.message_id;
-  const voteType = callback_query.data;
-  addVote(voiceId, voteType);
+  const replyToMessage = callback_query.message.reply_to_message;
+  const voiceId = replyToMessage.message_id;
+  const typeId = callback_query.data;
+  await model.addVote(
+    voiceId,
+    callback_query.from.id,
+    typeId
+  );
+  const messageVotes = await model.getMessageVotes(voiceId)
   ctx.editMessageReplyMarkup({
-    inline_keyboard: drawButtons(voiceId)
+    inline_keyboard: drawButtons(messageVotes)
   }, {
     chat_id: callback_query.from.id, 
     message_id: callback_query.message.message_id
   }).catch(noop);
   ctx.answerCbQuery().catch(noop);
 
-})
+});
 
-const restart = (signal) => {
+const stop = (signal) => {
   console.log('stop', signal);
   bot.stop(signal);
-  //bot.launch();
+  model.stop();
 }
 
-process.on('SIGINT', () => restart('SIGINT'));
-process.on('SIGTERM', () => restart('SIGTERM'));
+process.on('SIGINT', () => stop('SIGINT'));
+process.on('SIGTERM', () => stop('SIGTERM'));
 
 const launchBot = () => {
   if (process.env.NODE_ENV === 'production') {
-    const URL = 'https://radiant-fortress-05622.herokuapp.com';
     const PORT = process.env.PORT || 3000;
     bot.telegram.setWebhook(`${URL}/bot${TOKEN}`);
     bot.startWebhook(`/bot${TOKEN}`, null, PORT)
