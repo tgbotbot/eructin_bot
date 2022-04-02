@@ -120,8 +120,8 @@ process.on('SIGTERM', () => stop('SIGTERM'));
 const launchBot = () => {
   if (process.env.NODE_ENV === 'production') {
     const PORT = process.env.PORT || 3000;
-    bot.telegram.setWebhook(`${URL}/bot${TOKEN}`);
-    bot.startWebhook(`/bot${TOKEN}`, null, PORT)
+    bot.telegram.setWebhook(`${URL}/bot${TELEGRAM_TOKEN}`);
+    bot.startWebhook(`/bot${TELEGRAM_TOKEN}`, null, PORT)
   } else {
     bot.launch()
   }
